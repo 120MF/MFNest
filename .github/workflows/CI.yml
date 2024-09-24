@@ -14,4 +14,11 @@ jobs:
         with:
           extended: true
       - name: Build
-        run: hugo --minify
+        run: hugo
+      - name: Setup Ossutil
+        uses: manyuanrong/setup-ossutil@v3.0
+        with:
+          endpoint: "oss-cn-beijing.aliyuncs.com"
+          access-key-id: ${{ secrets.KEY }}
+          access-key-secret: ${{ secrets.SECRET }}
+      - run: ossutil cp -rf public oss://mfnest/

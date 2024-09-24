@@ -1,0 +1,189 @@
+baseURL = 'https://mfnest.tech/'
+languageCode = 'zh-cn'
+title = '羽窝'
+theme = 'hugo-theme-stack'
+
+
+DefaultContentLanguage = "zh-cn"
+hasCJKLanguage = false
+
+
+
+[pagination]
+pagerSize = 5
+
+
+[menu]
+[[menu.main]]
+    name = "主页"
+    url = "/"
+    weight = 1
+    identifier = "home"
+    [menu.main.params]
+        icon = "home"
+        newTab = false
+[[menu.main]]
+    name = "搜索"
+    url = "/page/search"
+    weight = 1
+    identifier = "search"
+    [menu.main.params]
+        icon = "search"
+        newTab = false
+[[menu.main]]
+    name = "归档"
+    url = "/page/archives"
+    weight = 1
+    identifier = "archives"
+    [menu.main.params]
+        icon = "archives"
+        newTab = false
+[[menu.main]]
+    name = "链接"
+    url = "/page/links"
+    weight = 1
+    identifier = "links"
+    [menu.main.params]
+        icon = "link"
+        newTab = false
+        
+
+[[menu.social]]
+    name = "Github"
+    url = "https://github.com/MoonBite666"
+    identifier = "github"
+    [[menu.social.params]]
+        icon = "brand-github"
+[[menu.social]]
+    name = "Twitter"
+    url = "https://x.com/MoonFeather120"
+    identifier = "twitter"
+    [[menu.social.params]]
+        icon = "brand-twitter"
+
+
+[markup]
+        # Markdown renderer configuration
+[markup.goldmark.renderer]
+unsafe = true
+
+[markup.goldmark.extensions.passthrough]
+enable = true
+
+# LaTeX math support
+# https://gohugo.io/content-management/mathematics/
+[markup.goldmark.extensions.passthrough.delimiters]
+block = [['\[', '\]'], ['$$', '$$']]
+inline = [['\(', '\)']]
+
+[markup.tableOfContents]
+endLevel = 4
+ordered = true
+startLevel = 2
+
+[markup.highlight]
+noClasses = false
+codeFences = true
+guessSyntax = true
+lineNoStart = 1
+lineNos = true
+lineNumbersInTable = true
+tabWidth = 4
+
+
+
+[params]
+
+# Pages placed under these sections will be shown on homepage and archive page.
+description = '两只大学生的学习记录、技术分享和弱智瞬间'
+mainSections = ["post"]
+# Output page's full content in RSS.
+rssFullContent = true
+favicon = "/favicon.png"
+
+[params.footer]
+since = 2023
+customText = '<p>moonfeather with 120glowing</p><a href="https://beian.miit.gov.cn/" target="_blank">滇ICP备 · 2023005780号</a>'
+
+[params.dateFormat]
+published = "Jan 02, 2006"
+lastUpdated = "Jan 02, 2006 15:04 MST"
+
+[params.sidebar]
+emoji = "🎶"
+subtitle = "热爱游戏与音乐，享受生活和共鸣。"
+
+[params.sidebar.avatar]
+enabled = true
+local = true
+src = "img/avatar.jpg"
+
+[params.article]
+headingAnchor = false
+math = false
+readingTime = true
+
+[params.article.license]
+enabled = true
+default = "Licensed under CC BY-NC-SA 4.0"
+
+## Widgets
+[[params.widgets.homepage]]
+type = "search"
+
+[[params.widgets.homepage]]
+type = "archives"
+
+[params.widgets.homepage.params]
+limit = 5
+
+[[params.widgets.homepage]]
+type = "categories"
+
+[params.widgets.homepage.params]
+limit = 10
+
+[[params.widgets.homepage]]
+type = "tag-cloud"
+
+[params.widgets.homepage.params]
+limit = 10
+
+[[params.widgets.page]]
+type = "toc"
+
+[params.opengraph.twitter]
+site = ""
+card = "summary_large_image"
+
+[params.defaultImage.opengraph]
+enabled = false
+local = false
+src = ""
+
+[params.colorScheme]
+toggle = true
+default = "auto"
+
+[params.imageProcessing.cover]
+enabled = true
+
+[params.imageProcessing.content]
+enabled = true
+
+## Comments
+
+
+# Related contents configuration
+[related]
+includeNewer = true
+threshold = 60
+toLower = false
+
+[[related.indices]]
+name = "tags"
+weight = 100
+
+[[related.indices]]
+name = "categories"
+weight = 200

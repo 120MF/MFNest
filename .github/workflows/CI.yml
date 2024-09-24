@@ -9,8 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 
-        uses: actions/setup-node@v4.0.4
-      - run: npm install
-      - run: npm install -g hexo-cli
-      - run: hexo generate
+      - name: Hugo setup
+        uses: peaceiris/actions-hugo@v3.0.0
+        with:
+          extended: true
+      - name: Build
+        run: hugo --minify

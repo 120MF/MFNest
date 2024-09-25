@@ -2,9 +2,9 @@
 title = '学习React第0章-起点'
 date = 2024-09-25T16:55:52+08:00
 draft = false
-description = ""
+description = "这篇笔记介绍了React框架的起源和优势，强调了前端开发的重要性，并概述了JavaScript的基础知识，包括模板字面量、箭头函数、短路逻辑运算符、可选链和数组方法。"
 slug = "LearningReact-00"
-image = ""
+image = "image-1.png"
 categories = ["编程相关"]
 tags = ["JavaScript","React","JSX","前端","学习笔记"]
 weight = 1       # You can add weight to some posts to override the default sorting (date descending)
@@ -46,3 +46,55 @@ JavaScript是一种前端开发语言。在React出现之前，人们可以使�
 
 因此，我们需要像React这样的框架辅助我们快速地构建前端程序。
 
+## JavaScript基础
+
+React使用`JSX`语法，意味着你需要一些前置的JavaScript技能。
+
+### 模板字面量
+
+```javascript
+const title = "Title";
+const summary = `a book titled ${title}`;
+```
+
+### 箭头函数
+
+一种类似Lambda的函数体。`()`内表示接受的参数。
+
+```javascript
+function_with_callback(
+    (e)=>{
+    for(int i = e; i > 0; i--){
+        console.log(i);
+    }
+})
+```
+
+### 短路逻辑运算符
+
+```javascript
+console.log(flag && "somestring");
+```
+
+当`flag`为`true`时，就会返回`&&`后的真值，否则返回flag。
+
+### 可选链
+
+```javascript
+console.log(book.reviews.librarything?.reviewCount);
+```
+
+若`librarything`属性不存在，会返回`undefined`。
+
+### 数组方法
+
+```javascript
+const x = [1,2,3,4,5].map((el)=>el*2;);
+//x = [2,4,6,8,10]
+const y = [1,2,3,4,5].filter((el)=>el>3);
+//y = [4,5]
+const z = [2,3,1,5,4].sort((a,b)=>a-b);
+//z = [1,2,3,4,5]
+```
+
+这些方法都会返回一个新的数组，因此在React中十分常用。

@@ -5,12 +5,12 @@ theme = 'hugo-theme-stack'
 
 
 DefaultContentLanguage = "zh-cn"
-hasCJKLanguage = false
+hasCJKLanguage = true
 
 
 
 [pagination]
-pagerSize = 5
+pagerSize = 10
 
 
 [menu]
@@ -100,6 +100,8 @@ mainSections = ["post"]
 # Output page's full content in RSS.
 rssFullContent = true
 favicon = "/favicon.png"
+ArticleReadingTime = true
+
 
 [params.footer]
 since = 2023
@@ -125,7 +127,7 @@ readingTime = true
 
 [params.article.license]
 enabled = true
-default = "Licensed under CC BY-NC-SA 4.0"
+default = "Licensed under CC BY 4.0"
 
 ## Widgets
 [[params.widgets.homepage]]

@@ -9,6 +9,7 @@ categories = ["编程相关"]
 tags = ["CS61A","Python","学习笔记","数据结构"]
 weight = 1       # You can add weight to some posts to override the default sorting (date descending)
 keywords = ["CS61A","Python","学习笔记","数据结构"]
+readingTime = true
 +++
 
 ## 一、字典

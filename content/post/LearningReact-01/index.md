@@ -59,6 +59,49 @@ React中的道具由父组件向子组件单向传递。我们可以使用道具
 
 ![image](image-4.png)
 
+## 使用道具
+
+### `props`参数传递
+
+可以直接在`JSX`的标签中指定参数，并在子组件中使用默认的`props`参数来接收；
+
+```JSX
+// in father component
+return <Child value1="1" value2="2" />;
+//
+funtcion Child(props){
+  //props.value1 : "1"
+  //props.value2 : "2"
+}
+```
+
+### 参数展开
+
+可以在`JSX`的标签中指定多项参数，在子组件中对其进行展开接收。
+
+```JSX
+// in father component
+return <Child value1="1" value2="2" />;
+//
+funtcion Child({value1, value2}){
+  //value1 : "1"
+  //value2 : "2"
+}
+```
+
+### `children`参数
+
+可以传递`JSX`中标签块头尾之间的元素。这些元素会被子组件用`children`参数接收。
+
+```JSX
+return <Child><p>HelloWorld!</p></Child>;
+//
+funtcion Child({children}){
+  return children;
+  //<p>HelloWorld!</p>
+}
+```
+
 ## 组件与道具实战
 
 一张个人资料卡片。由四种组件组成：

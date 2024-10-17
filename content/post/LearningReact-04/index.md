@@ -2,11 +2,11 @@
 title = '学习React第4章-状态管理与上下文'
 date = 2024-10-17T12:02:48+08:00
 draft = false
-description = ""
+description = "这篇笔记介绍了如何使用React的Reducer钩子和Context API进行状态管理，并详细讲解了Redux的使用方法及其与Context API的比较。"
 slug = "学习React第4章-状态管理与上下文"
 image = "image-1.png"
 categories = ["编程相关"]
-tags = ["JavaScript","React","JSX","前端","学习笔记","Hook"]
+tags = ["JavaScript","React","JSX","前端","学习笔记","Redux"]
 weight = 1       # You can add weight to some posts to override the default sorting (date descending)
 keywords = ["JavaScript","React","JSX","前端","学习笔记","State","Reducer","Hook","Redux","Context"]
 readingTime = true
@@ -57,4 +57,191 @@ readingTime = true
 ![Context API原理](image-7.png)
 
 ### 使用方法
+
+- 创建、提供上下文；
+
+![创建上下文](image-8.png)
+
+![包裹上下文](image-9.png)
+
+![传递值](image-10.png)
+
+- 消费上下文。
+
+![使用useContext](image-11.png)
+
+实际开发中，我们将上下文及其相关状态的新建等单独放置在一份js代码中，将上下文的`value`提前打包好。
+
+```jsx
+//PostContext.js
+
+const PostContext = createContext();
+
+function PostProvider({children}){
+    //add state in this component
+    //......
+    return (<PostContext.Provider value={{/*...*/}}>
+        {children}
+        </PostContext.Provider>
+    );
+}
+
+function usePosts(){
+    //warp 'useContext' hook
+    const context = useContext(PostContext);
+    if(context) return context;
+    else throw new Error("Outside of provider.");
+}
+
+export { PostProvider, usePost };
+
+```
+
+## Redux
+
+Redux是一个用来管理全局状态的第三方库，集成了常用的状态管理、全局状态结局方案，可以用作大型程序的状态管理工具。
+
+![Redux介绍](image-12.png)
+
+![学习Redux的意义](image-13.png)
+
+![Redux作用机理](image-14.png)
+
+`Redux`和`Reducer`相近，都使用`dispatch`作为操作变量的入口。它们的区别体现在`Redux`使用一个store来储存多种reducer，`Reducer`使用一个reducer来对应不同的动作。
+
+### 使用方法
+
+- 使用`Redux Toolkit`的`configureStore`来创建`store`；
+
+```jsx
+import { configureStore } from "@reduxjs/toolkit";
+
+import accountReducer from "./features/accounts/accountSlice";
+import customerReducer from "./features/customers/customerSlice";
+
+const store = configureStore({
+  reducer: {
+    account: accountReducer,
+    customer: customerReducer,
+  },
+});
+
+export default store;
+```
+
+- 使用`Redux-slice`来创建store中的reducer切片。
+
+```jsx
+import { createSlice } from "@reduxjs/toolkit";
+
+const initialState = {
+  fullName: "",
+  nationalID: "",
+  createdAt: "",
+};
+
+const customerSlice = createSlice({
+  name: "customer",
+  initialState,
+  reducers: {
+    createCustomer: {
+      prepare(fullName, nationalID) {
+        return {
+          payload: {
+            fullName,
+            nationalID,
+            createdAt: new Date().toISOString(),
+          },
+        };
+      },
+      reducer(state, action) {
+        state.fullName = action.payload.fullName;
+        state.nationalID = action.payload.nationalID;
+        state.createdAt = action.payload.createdAt;
+      },
+    },
+    updateName(state, action) {
+      state.fullName = action.payload;
+    },
+  },
+});
+
+export const { createCustomer, updateName } = customerSlice.actions;
+
+export default customerSlice.reducer;
+```
+
+- 在程序中使用`useDispatch`和`useSelect`来操作、读取状态变量。
+
+```jsx
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { createCustomer } from "./customerSlice";
+
+function Customer() {
+  const [fullName, setFullName] = useState("");
+  const [nationalId, setNationalId] = useState("");
+
+  const dispatch = useDispatch();
+
+  function handleClick() {
+    if (!fullName || !nationalId) return;
+    dispatch(createCustomer(fullName, nationalId));
+  }
+
+  return (
+    //...
+  );
+}
+
+export default Customer;
+// account.js
+
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { deposit, payLoan, requestLoan, withdraw } from "./accountSlice";
+
+function AccountOperations() {
+  const [depositAmount, setDepositAmount] = useState("");
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [loanAmount, setLoanAmount] = useState("");
+  const [loanPurpose, setLoanPurpose] = useState("");
+  const [currency, setCurrency] = useState("USD");
+
+  const dispatch = useDispatch();
+  //use selector
+  const {
+    loan: currentLoan,
+    loanPurpose: currentLoanPurpose,
+    balance,
+    isLoading,
+  } = useSelector((store) => store.account);
+    //...
+}
+```
+
+还可以使用中间件(`Middleware`)`Thunk`来在`Reducer`中引入副作用。
+
+### 与Context API的比较
+
+![优缺点](image-17.png)
+
+![使用场景](image-18.png)
+
+总的来说，Redux适合大型软件的开发，但是不够轻量化，使用难度也更高。我们需要根据`异步操作`和`性能`的需求来选择使用`Redux`或`Context API`进行状态管理。
+
+## 状态管理总结
+
+对SPA来说，可以归纳出以下四种状态变量：
+
+- 本地状态，仅在某些子组件中存在；
+- 全局状态，被大部分子组件使用；
+- 远程状态，需要从外部API获取；
+- UI状态，除远程状态外的状态。
+
+![状态种类](image-15.png)
+
+我们可以使用不同的工具，针对不同的状态进行管理。
+
+![状态管理工具](image-16.png)
 

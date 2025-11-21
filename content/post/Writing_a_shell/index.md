@@ -7,10 +7,23 @@ slug = ""
 image = ""
 categories = ["编程相关","Linux"]
 tags = ["Linux", "Shell", "进程"]
-weight = 1       # You can add weight to some posts to override the default sorting (date descending)
-keywords = []
+weight = 1
+keywords = ["Linux", "Shell", "进程"]
 readingTime = true
 +++
+
+## 序
+
+让我们用 C/C++来自制一个 Unix(Linux) Shell 吧！
+
+### 关键概念
+
+- REPL 循环： 读取用户输入，解析命令行参数。
+- 进程控制： 在 Shell 中通过创建子进程执行用户命令。
+- 重定向与管道： 操作文件描述符 (dup2) 来实现 ls | grep c 这样的功能。
+- 信号处理： 实现 Ctrl+C (SIGINT) 不杀掉 Shell 而是杀掉子进程。
+- 后台作业控制：处理 &, fg, bg 命令。
+- 更多：历史记录、读取配置等……
 
 ## REPL 循环
 
@@ -261,3 +274,18 @@ void loop() {
 }
 
 ```
+
+### GDB 设置
+
+默认情况下，GDB 无法进入子进程内部。需要在`~/.gdbinit`中添加下列语句：
+
+```plaintext
+set detach-on-fork off
+set follow-fork-mode child
+```
+
+设置 `set detach-on-fork off`，GDB 会在 fork() 后，将父进程和新创建的子进程都保持在停止状态；设置 `set follow-fork-mode child` 会让 GDB 继续调试子进程；想调试父进程调为 Parent 即可。
+
+## 仓库
+
+[wsh](https://github.com/120MF/wsh)

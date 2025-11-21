@@ -1,29 +1,29 @@
 +++
-title = '自制Shell 00 - REPL与子进程'
+title = 'WeaveShell 00 - REPL与子进程'
 date = 2025-11-15T21:00:50+08:00
 draft = false
-description = ""
+description = "C/C++ 自制 Unix(Linux) Shell，实现REPL和进程控制。"
 slug = ""
-image = ""
+image = "1.png"
 categories = ["编程相关","Linux"]
 tags = ["Linux", "Shell", "进程"]
 weight = 1
-keywords = ["Linux", "Shell", "进程"]
+keywords = ["Linux", "Shell", "进程", "WeaveStar", "MoonFeather"]
 readingTime = true
 +++
 
 ## 序
 
-让我们用 C/C++来自制一个 Unix(Linux) Shell 吧！
+让我们用 C/C++ 来自制一个 Unix(Linux) Shell 吧！
 
 ### 关键概念
 
-- REPL 循环： 读取用户输入，解析命令行参数。
-- 进程控制： 在 Shell 中通过创建子进程执行用户命令。
-- 重定向与管道： 操作文件描述符 (dup2) 来实现 ls | grep c 这样的功能。
-- 信号处理： 实现 Ctrl+C (SIGINT) 不杀掉 Shell 而是杀掉子进程。
-- 后台作业控制：处理 &, fg, bg 命令。
-- 更多：历史记录、读取配置等……
+- **REPL 循环**：读取用户输入，解析命令行参数
+- **进程控制**：在 Shell 中通过创建子进程执行用户命令
+- **重定向与管道**：操作文件描述符 (dup2) 来实现 `ls | grep c` 这样的功能
+- **信号处理**：实现 Ctrl+C (SIGINT) 不杀掉 Shell 而是杀掉子进程
+- **后台作业控制**：处理 `&`、`fg`、`bg` 命令
+- **更多特性**：历史记录、读取配置等
 
 ## REPL 循环
 
@@ -44,7 +44,7 @@ void loop() {
 }
 ```
 
-采用`std::print`和`std::getline`进行控制台输出/输入
+采用 `std::print` 和 `std::getline` 进行控制台输出/输入。
 
 ### 解析用户指令
 
@@ -87,7 +87,7 @@ ERRORS
 
 ```
 
-fork 出的子进程是当前进程的拷贝。要使用这个 fork 出的进程，只需要在当前代码的位置中继续往下执行就可以。
+fork 出的子进程是当前进程的拷贝。要使用这个 fork 出的进程，只需要在当前代码的位置继续往下执行即可。
 
 ```c
 // man 2 fork example
@@ -141,15 +141,15 @@ NAME
        should point to the filename associated with the file being executed.  The array of pointers must be terminated by a null pointer.
 ```
 
-我们可以在子进程中将用户输入的分割传入该函数执行。
+我们可以在子进程中将用户输入分割后传入该函数执行。
 
 ```cpp
       auto &path = s.front();
-      char *argv[s.size()];
-      for (int i = 0; i < s.size() - 1; i++) {
-        argv[i] = s[i + 1].data();
+      char *argv[s.size() + 1];
+      for (size_t i = 0; i < s.size(); ++i) {
+        argv[i] = s[i].data();
       }
-      // 注意，因为execvp没有argc限制参数数量，因此需要将数组最后一位置为nullptr。
+      // 注意：因为 execvp 没有 argc 参数来限制参数数量，因此需要将数组最后一位置为 nullptr
       argv[s.size()] = nullptr;
       auto ret = execvp(path.c_str(), argv);
       if (ret == -1) {
@@ -178,7 +178,7 @@ DESCRIPTION
        been waited upon by one of these system calls is termed waitable.
 ```
 
-对给定的`pid`执行`waitpid()`后，`waitpid()`会根据 options 参数决定返回值：
+对给定的 `pid` 执行 `waitpid()` 后，`waitpid()` 会根据 `options` 参数决定返回值：
 
 ```plaintext
        WNOHANG
@@ -191,14 +191,14 @@ DESCRIPTION
               also return if a stopped child has been resumed by delivery of SIGCONT.
 ```
 
-各种 option 参数的执行情况如下：
+`waitpid()` 各种 `options` 参数的执行情况如下：
 
-- 默认 option(0)的情况下，waitpid 阻塞等待进程结束，返回进程 PID。
-- 使用`WNOHANG`，waitpid 非阻塞；如果子进程结束，返回进程 PID；如果没有子进程结束，立即返回 0。
-- 使用`WUNTRACED`，waitpid 阻塞，如果子进程进入停止态，waitpid()立即返回 0。这可以解决默认情况下 waitpid 在子进程进入停止态时无限等待的行为
-- 使用`WCONTINUED`， waitpid 阻塞，如果停止的子进程被恢复就立即返回
+- **默认 option (0) 的情况下**：waitpid 阻塞等待进程结束，返回进程 PID
+- **使用 `WNOHANG`**：waitpid 非阻塞；如果子进程结束，返回进程 PID；如果没有子进程结束，立即返回 0
+- **使用 `WUNTRACED`**：waitpid 阻塞，如果子进程进入停止态，waitpid() 立即返回 0。这可以解决默认情况下 waitpid 在子进程进入停止态时无限等待的行为
+- **使用 `WCONTINUED`**：waitpid 阻塞，如果停止的子进程被恢复就立即返回
 
-在当前简单的 REPL 实现里我们直接使用 0 阻塞等待即可。
+在当前简单的 REPL 实现里，我们直接使用默认参数 (0) 阻塞等待即可。
 
 ```cpp
 //主线程
@@ -209,24 +209,24 @@ if (ret == -1) {
 }
 ```
 
-### Debug
+### 调试
 
-运行时会有错误：
+运行时会遇到错误：
 
 ```plaintext
 > ls --help
 --help: 无法访问 'H'$'\211\302''H'$'\203\352\001''H'$'\211''U'$'\320''H'$'\215\024\305': 没有那个文件或目录
 ```
 
-两个问题：
+存在两个问题：
 
-- size()大小访问数组导致溢出
+- 数组大小计算错误导致溢出
 
 ```cpp
 argv[s.size()] = nullptr;
 ```
 
-- argv[0]必须要是程序名称。
+- `argv[0]` 必须是程序名称
 
 修改完的代码如下：
 
@@ -235,26 +235,29 @@ void loop() {
   std::string line;
   while (true) {
     std::print("> ");
+    // Get user input
     if (!std::getline(std::cin, line)) {
       break;
     }
     int wstatus{};
+    // Parse user input
     auto s = parse_line(line);
-    for (auto &str : s) {
-      std::println("{}", str);
-    }
+    // Start new process
     auto pid = fork();
     switch (pid) {
     case -1:
+      // On fork error
       perror("fork");
       std::exit(EXIT_FAILURE);
     case 0: {
+      // Child process
       auto &path = s.front();
       std::vector<char *> argv(s.size() + 1);
       for (size_t i = 0; i < s.size(); ++i) {
         argv[i] = s[i].data();
       }
       argv[s.size()] = nullptr;
+      // Execute
       auto ret = execvp(path.c_str(), argv.data());
       if (ret == -1) {
         perror("execvp");
@@ -263,6 +266,8 @@ void loop() {
       std::exit(EXIT_SUCCESS);
     }
     default: {
+      // Parent process
+      // Block wait child
       auto ret = waitpid(pid, &wstatus, 0);
       if (ret == -1) {
         perror("waitpid");
@@ -273,18 +278,19 @@ void loop() {
   }
 }
 
+
 ```
 
-### GDB 设置
+### GDB 调试设置
 
-默认情况下，GDB 无法进入子进程内部。需要在`~/.gdbinit`中添加下列语句：
+默认情况下，GDB 无法进入子进程内部。需要在 `~/.gdbinit` 中添加以下语句：
 
 ```plaintext
 set detach-on-fork off
 set follow-fork-mode child
 ```
 
-设置 `set detach-on-fork off`，GDB 会在 fork() 后，将父进程和新创建的子进程都保持在停止状态；设置 `set follow-fork-mode child` 会让 GDB 继续调试子进程；想调试父进程调为 Parent 即可。
+设置 `set detach-on-fork off` 后，GDB 会在 `fork()` 后将父进程和新创建的子进程都保持在停止状态；设置 `set follow-fork-mode child` 会让 GDB 继续调试子进程；若要调试父进程，将其改为 `parent` 即可。
 
 ## 仓库
 

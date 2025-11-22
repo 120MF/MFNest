@@ -85,7 +85,13 @@ grep "hello" < 1.txt < 2.txt # 两个文件的内容会被叠加到输入流中
 
 之前，我们的解析器返回用户输入的分词；现在我们在解析器中解析可能存在的重定向符号，将其与文件名从用户输入中剔除并返回。这样还避免了改动原来的子进程逻辑。
 
-```cpp
+```cppif (fd == -1) {
+        // ...
+      }
+      int ret = dup2(fd, STDIN_FILENO);
+      if (ret == -1) {
+        // ...
+      }
 //Vector内数组分别代表重定向符和文件名
 using Redirects = std::vector<std::array<std::string, 2>>;
 // 解析结果
@@ -143,39 +149,53 @@ ParseResult parse_line(std::string str) {
 man 2 open
 
 NAME
-       open, creat - 打开和/或创建一个文件
+       open, openat, creat - open and possibly create a file
 
-SYNOPSIS 总览
+SYNOPSIS
        #include <fcntl.h>
-       int open(const char *pathname, int flags);
 
-       描述 (DESCRIPTION)
-       open()   通常用于将路径名转换为一个文件描述符（一个非负的小整数，在   read   ,   write  等  I/O  操作中将会被使用）。当  open()
-       调用成功，它会返回一个新的文件描述符（永远取未用描述符的最小值）。
-       参数 flags 是通过 O_RDONLY, O_WRONLY 或 O_RDWR (指明 文件 是以 只读 , 只写 或 读写 方式 打开的) 与 下面的 零个 或 多个 可选模式按位 -or 操作 得到的。
+       int open(const char *pathname, int flags, ...
+                  /* mode_t mode */ );
+
+
+DESCRIPTION
+       The open() system call opens the file specified by pathname.  If the specified file does not exist, it may optionally (if O_CREAT is specified in flags) be
+       created by open().
+
+       The return value of open() is a file descriptor, a small, nonnegative integer that is an index to an entry in the process's table of open file descriptors.
+       The  file  descriptor is used in subsequent system calls (read(2), write(2), lseek(2), fcntl(2), etc.)  to refer to the open file.  The file descriptor re‐
+       turned by a successful call will be the lowest-numbered file descriptor not currently open for the process.
+
 ```
 
 在 REPL 循环中，我们先获取最后一次出现的重定向文件名，并使用 open()函数打开它。
 
 ```cpp
 if (!out_file.empty()) {
-  // 覆盖/追加 | 读写权限
-  int fd = open(out_file.data(), out_flag | O_RDWR);
+  // 覆盖/追加 | 创建文件 | 读写权限 , 权限
+    int fd = open(out_file.data(), out_flag | O_CREAT | O_WRONLY, 0644);
 }
 ```
 
 ```plaintext
 使用到的 open 标记
 
-O_CREAT
-              若文件 不存在 将 创建 一个 新 文件.  新 文件 的 属主 (用户ID) 被 设置 为 此 程序 的 有效 用户 的  ID.   同样  文件  所属
-              分组  也 被 设置 为 此 程序 的 有效 分组 的 ID 或者 上层 目录 的 分组 ID (这 依赖 文件系统 类型 ,装载选项 和 上层目录 的
-              模式, 参考,在 mount(8) 中 描述 的 ext2 文件系统 的 装载选项 bsdgroups 和 sysvgroups )
+       O_TRUNC
+              If the file already exists and is a regular file and the access mode allows writing (i.e., is O_RDWR or O_WRONLY) it will be truncated to length  0.
+              If the file is a FIFO or terminal device file, the O_TRUNC flag is ignored.  Otherwise, the effect of O_TRUNC is unspecified.
+
 
        O_APPEND
-              文件  以  追加  模式 打开 . 在 写 以前 , 文件 读写 指针 被 置 在 文件 的 末尾 .  as if with lseek.  O_APPEND may lead to
-              corrupted files on NFS file systems if more than one process appends data to a file at once.  This is because  NFS  does
-              not support appending to a file, so the client kernel has to simulate it, which can't be done without a race condition.
+              The file is opened in append mode.  Before each write(2), the file offset is positioned at the end of the file, as if with lseek(2).  The  modifica‐
+              tion of the file offset and the write operation are performed as a single atomic step.
+
+              O_APPEND  may lead to corrupted files on NFS filesystems if more than one process appends data to a file at once.  This is because NFS does not sup‐
+              port appending to a file, so the client kernel has to simulate it, which can't be done without a race condition.
+
+       O_CREAT
+              If pathname does not exist, create it as a regular file.
+
+......
 ```
 
 #### 重定向描述符
@@ -221,11 +241,77 @@ O_CREAT
 
 > 注意：子操作完成后，不要忘记`close()`刚才`open()`的`fd`！
 
+```cpp
+//成功创建后
+fds.push_back(fd);
+// 批量关闭
+for (auto fd : fds) {
+    close(fd);
+}
+```
+
 #### 实现代码
+
+```cpp
+void child_process(ParseResult &result) {
+  // Parse exe
+  // ...
+  // Parse redirection
+  // 这里保留在子进程中解析vector的方法，未来可以实现MULTIOS
+  if (!result.redirects.empty()) {
+    std::string_view out_file{}, in_file{};
+    int out_flag{};
+    for (auto &arr : result.redirects) {
+      if (arr[0] == ">") {
+        out_file = arr[1];
+        out_flag = O_TRUNC;
+      } else if (arr[0] == ">>") {
+        out_file = arr[1];
+        out_flag = O_APPEND;
+      } else if (arr[0] == "<") {
+        in_file = arr[1];
+      }
+    }
+    std::vector<int> fds;
+    if (!out_file.empty()) {
+      int fd = open(out_file.data(), out_flag | O_CREAT | O_WRONLY, 0644);
+      if (fd == -1) {
+        perror("open");
+        std::exit(EXIT_FAILURE);
+      }
+      int ret = dup2(fd, STDOUT_FILENO);
+      if (ret == -1) {
+        perror("dup2");
+        std::exit(EXIT_FAILURE);
+      }
+      fds.push_back(fd);
+    }
+    if (!in_file.empty()) {
+      int fd = open(in_file.data(), O_RDONLY);
+      if (fd == -1) {/* ... */}
+      int ret = dup2(fd, STDIN_FILENO);
+      if (ret == -1) {/* ... */ }
+      fds.push_back(fd);
+    }
+    for (auto fd : fds) {
+      close(fd);
+    }
+  }
+  // Execute
+  // ...
+}
+
+```
+
+## 管道
 
 ## 仓库
 
 [wsh](https://github.com/120MF/wsh)
+
+```
+
+```
 
 ```
 

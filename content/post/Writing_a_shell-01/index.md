@@ -4,7 +4,7 @@ date = 2025-11-22T00:21:12+08:00
 draft = false
 description = "C/C++ 自制 Unix(Linux) Shell，实现管道与重定向。"
 slug = ""
-image = "1.png"
+image = "pipe.png"
 categories = ["编程相关","Linux"]
 tags = ["Linux", "Shell", "进程"]
 weight = 1
@@ -85,13 +85,7 @@ grep "hello" < 1.txt < 2.txt # 两个文件的内容会被叠加到输入流中
 
 之前，我们的解析器返回用户输入的分词；现在我们在解析器中解析可能存在的重定向符号，将其与文件名从用户输入中剔除并返回。这样还避免了改动原来的子进程逻辑。
 
-```cppif (fd == -1) {
-        // ...
-      }
-      int ret = dup2(fd, STDIN_FILENO);
-      if (ret == -1) {
-        // ...
-      }
+```cpp
 //Vector内数组分别代表重定向符和文件名
 using Redirects = std::vector<std::array<std::string, 2>>;
 // 解析结果
@@ -149,58 +143,46 @@ ParseResult parse_line(std::string str) {
 man 2 open
 
 NAME
-       open, openat, creat - open and possibly create a file
+       open, creat - 打开和/或创建一个文件
 
-SYNOPSIS
+SYNOPSIS 总览
        #include <fcntl.h>
+       int open(const char *pathname, int flags);
 
-       int open(const char *pathname, int flags, ...
-                  /* mode_t mode */ );
-
-
-DESCRIPTION
-       The open() system call opens the file specified by pathname.  If the specified file does not exist, it may optionally (if O_CREAT is specified in flags) be
-       created by open().
-
-       The return value of open() is a file descriptor, a small, nonnegative integer that is an index to an entry in the process's table of open file descriptors.
-       The  file  descriptor is used in subsequent system calls (read(2), write(2), lseek(2), fcntl(2), etc.)  to refer to the open file.  The file descriptor re‐
-       turned by a successful call will be the lowest-numbered file descriptor not currently open for the process.
-
+       描述 (DESCRIPTION)
+       open()   通常用于将路径名转换为一个文件描述符（一个非负的小整数，在   read   ,   write  等  I/O  操作中将会被使用）。当  open()
+       调用成功，它会返回一个新的文件描述符（永远取未用描述符的最小值）。
+       参数 flags 是通过 O_RDONLY, O_WRONLY 或 O_RDWR (指明 文件 是以 只读 , 只写 或 读写 方式 打开的) 与 下面的 零个 或 多个 可选模式按位 -or 操作 得到的。
 ```
 
-在 REPL 循环中，我们先获取最后一次出现的重定向文件名，并使用 open()函数打开它。
+在 REPL 循环中，我们先获取最后一次出现的重定向文件名，并使用 open() 函数打开它。
 
 ```cpp
 if (!out_file.empty()) {
-  // 覆盖/追加 | 创建文件 | 读写权限 , 权限
-    int fd = open(out_file.data(), out_flag | O_CREAT | O_WRONLY, 0644);
+  // 覆盖/追加 | 创建文件 | 只写权限，权限为0644
+  int fd = open(out_file.data(), out_flag | O_CREAT | O_WRONLY, 0644);
 }
 ```
 
 ```plaintext
 使用到的 open 标记
 
-       O_TRUNC
-              If the file already exists and is a regular file and the access mode allows writing (i.e., is O_RDWR or O_WRONLY) it will be truncated to length  0.
-              If the file is a FIFO or terminal device file, the O_TRUNC flag is ignored.  Otherwise, the effect of O_TRUNC is unspecified.
-
+O_CREAT
+              若文件 不存在 将 创建 一个 新 文件.  新 文件 的 属主 (用户ID) 被 设置 为 此 程序 的 有效 用户 的  ID.   同样  文件  所属
+              分组  也 被 设置 为 此 程序 的 有效 分组 的 ID 或者 上层 目录 的 分组 ID (这 依赖 文件系统 类型 ,装载选项 和 上层目录 的
+              模式, 参考,在 mount(8) 中 描述 的 ext2 文件系统 的 装载选项 bsdgroups 和 sysvgroups )
 
        O_APPEND
-              The file is opened in append mode.  Before each write(2), the file offset is positioned at the end of the file, as if with lseek(2).  The  modifica‐
-              tion of the file offset and the write operation are performed as a single atomic step.
-
-              O_APPEND  may lead to corrupted files on NFS filesystems if more than one process appends data to a file at once.  This is because NFS does not sup‐
-              port appending to a file, so the client kernel has to simulate it, which can't be done without a race condition.
-
-       O_CREAT
-              If pathname does not exist, create it as a regular file.
-
-......
+              文件  以  追加  模式 打开 . 在 写 以前 , 文件 读写 指针 被 置 在 文件 的 末尾 .  as if with lseek.  O_APPEND may lead to
+              corrupted files on NFS file systems if more than one process appends data to a file at once.  This is because  NFS  does
+              not support appending to a file, so the client kernel has to simulate it, which can't be done without a race condition.
 ```
 
 #### 重定向描述符
 
 我们可以使用 `dup()` 或 `dup2()` 函数来复制文件描述符，从而实现重定向。
+
+**dup 和 dup2 的作用原理**
 
 这两个函数的主要功能是创建一个新的文件描述符，让它指向与旧文件描述符（`oldfd`）相同的内核文件表项（File Description）。这意味着，两个描述符共享同一个文件偏移量（File Offset）和文件状态标志。
 
@@ -214,7 +196,9 @@ if (!out_file.empty()) {
   - 如果 `newfd` 已经被打开，`dup2` 会先自动关闭它，然后进行复制。
   - 如果 `oldfd` 和 `newfd` 相等，则直接返回 `newfd`，不做任何操作。
 
-以 `ls > out.txt` 为例：
+**为什么它们可以实现 Shell 重定向？**
+
+以 `ls > out.txt` 为例:
 
 1.  Shell 打开 `out.txt`，得到一个新的文件描述符，假设是 `fd = 3`。
 2.  此时，进程有 `0, 1, 2` 指向终端，`3` 指向 `out.txt`。
@@ -318,6 +302,22 @@ void child_process(ParseResult &result) {
 - 重定向作用域限制在“命令段”内部：例如 `cmd1 > out | cmd2` 将输出重定向到文件后再通过管道传递（依解析策略而定）；更常见的是 `cmd1 | cmd2 > out`，重定向只影响 cmd2。
 - 语法解析应遵循从左到右的顺序，但生成的“段”用于后续创建管道并 fork/exec 子进程。
 
+有意思的是，刚才提到的 `MULTIOS` 特性也适用于管道。
+
+```bash
+# zsh
+ls | grep C < CMakeLists.txt
+CMakeLists.txt # 同时接收了 ls 的输出
+set(CMAKE_CXX_STANDARD 23) # 和CMakeLists文件流
+file(GLOB_RECURSE WSH_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
+  ${WSH_SOURCES}
+# bash
+ls | grep C < CMakeLists.txt
+set(CMAKE_CXX_STANDARD 23) # 只有文件流
+file(GLOB_RECURSE WSH_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
+  ${WSH_SOURCES}
+```
+
 ### 实现管道
 
 #### 重构运行流程
@@ -404,6 +404,114 @@ for (auto pid : pids) {
 ```
 
 #### 连接输入输出流
+
+我们可以使用 Linux 的`pipe()`函数，创建一条连接两个子进程的 IPC 管道。
+
+```plaintext
+
+DESCRIPTION
+       pipe()  creates  a pipe, a unidirectional data channel that can be used for interprocess communication.  The array pipefd is used to return two file descriptors referring to the ends
+       of the pipe.  pipefd[0] refers to the read end of the pipe.  pipefd[1] refers to the write end of the pipe.  Data written to the write end of the pipe is buffered by the kernel until
+       it is read from the read end of the pipe.  For further details, see pipe(7).
+
+```
+
+这是`man 2 pipe`提供的示例：
+
+```c
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[])
+{
+    int    pipefd[2];
+    char   buf;
+    pid_t  cpid;
+
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <string>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+
+    cpid = fork();
+    if (cpid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+
+    if (cpid == 0) {    /* Child reads from pipe */
+        close(pipefd[1]);          /* Close unused write end */
+
+        while (read(pipefd[0], &buf, 1) > 0)
+            write(STDOUT_FILENO, &buf, 1);
+
+        write(STDOUT_FILENO, "\n", 1);
+        close(pipefd[0]);
+        _exit(EXIT_SUCCESS);
+
+    } else {            /* Parent writes argv[1] to pipe */
+        close(pipefd[0]);          /* Close unused read end */
+        write(pipefd[1], argv[1], strlen(argv[1]));
+        close(pipefd[1]);          /* Reader will see EOF */
+        wait(NULL);                /* Wait for child */
+        exit(EXIT_SUCCESS);
+    }
+```
+
+可以看到，我们可以在扮演输出的子进程中向`pipe[1]`（输出端）进行`write()`操作，在扮演输入的子进程中向`pipe[0]`（输入端）进行`read()`操作。
+
+对于我们的 Shell 应用来说，我们则需要将管道的左侧（输出子进程）的标准输出重定向到`pipe[1]`（输出端）；将管道的右侧（输入子进程）的标准输入重定向到`pipe[0]`（输入端）。
+
+```cpp
+// parser.cpp
+if (word == "|") {
+  // 尝试新建pipe
+  int pipefd[2];
+  if (pipe(pipefd) == -1) {
+    perror("pipe");
+    return {};
+  }
+  // 当前process（管道左侧）的管道输出端
+  process.pipe.second = pipefd[1];
+  res.processes.push_back(std::move(process));
+  process = ParseResult::Process{};
+  // 新process（管道右侧）的管道输入端
+  process.pipe.first = pipefd[0];
+}
+```
+
+接下来，我们在循环过程中为用户输入应用管道的重定向处理：
+
+```cpp
+if (pro.pipe.first) {
+  auto value = pro.pipe.first.value();
+  dup2(value, STDIN_FILENO);
+}
+if (pro.pipe.second) {
+  auto value = pro.pipe.second.value();
+  dup2(value, STDOUT_FILENO);
+}
+```
+
+需要注意的是，我们在循环`fork()`创建子进程的过程中，就为每个子进程把`pipe`创建的所有`fd`都拷贝了一份，因此，我们在子进程、父进程执行的最后也需要把管道涉及到的所有 fd 关闭掉。
+
+```cpp
+for (auto &process : res.processes) {
+  process.pipe.first.has_value() ? close(process.pipe.first.value()) : 0;
+  process.pipe.second.has_value() ? close(process.pipe.second.value()) : 0;
+}
+```
+
+最后，我们就可以实现管道的效果了。
+
+![pipe](pipe.png)
 
 ## 仓库
 

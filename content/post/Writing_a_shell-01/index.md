@@ -305,14 +305,106 @@ void child_process(ParseResult &result) {
 
 ## 管道
 
+实现以下功能：
+
+- ls | wc -l
+- ls /dev | grep tty
+
+### 语法解析
+
+在 Shell 中，管道（`|`）的作用是把左侧命令的标准输出连接到右侧命令的标准输入。语法解析的目标是把用户输入拆分成有顺序的“命令段（segment）”，每个命令段独立解析为程序名与参数，同时保留每段内可能的重定向信息。
+
+- 管道将多个命令按顺序串联：A | B | C 意味着 A 的 stdout -> B 的 stdin，B 的 stdout -> C 的 stdin。
+- 重定向作用域限制在“命令段”内部：例如 `cmd1 > out | cmd2` 将输出重定向到文件后再通过管道传递（依解析策略而定）；更常见的是 `cmd1 | cmd2 > out`，重定向只影响 cmd2。
+- 语法解析应遵循从左到右的顺序，但生成的“段”用于后续创建管道并 fork/exec 子进程。
+
+### 实现管道
+
+#### 重构运行流程
+
+不难看出，管道这一功能需要在我们的 Shell 中同时运行多个命令，这意味着我们必须在`loop`中创建`管道数量`个子进程。因此，我们有必要对当前的解析和循环流程进行重构。
+
+可以发现，对管道中每个子命令来说，解析的规则和流程和之前相比没有发生变化；那么，我们可以：
+
+- 保留当前的解析逻辑，作为`子命令`的解析方法；
+- 在 Parser 中，我们进一步把`用户输入`通过`|`管道符号切片成`子命令`，并通过 vector 来储存；
+- 在 REPL 中，我们遍历每个子命令，为每个子命令 fork 一个子进程，并按照之前的逻辑进行执行。
+
+```cpp
+// Parser重构
+using Words = std::vector<std::string>;
+using Redirects = std::vector<std::array<std::string, 2>>;
+
+struct ParseResult {
+  struct Process {
+    Words words;
+    Redirects redirects;
+  };
+  std::vector<Process> processes;
+};
+
+ParseResult parse_line(std::string str) {
+  ParseResult res;
+  ParseResult::Process process{};
+  std::stringstream s(str);
+  std::string word;
+  while (s >> word) {
+    if (word == "|") {
+      // 储存当前已经解析到的命令
+      res.processes.push_back(std::move(process));
+      // 新建下一个子命令
+      process = ParseResult::Process{};
+    }
+    // 剩下的逻辑不变
+    else if (word == ">" || word == "<" || word == ">>") {
+      std::array<std::string, 2> tmp;
+      tmp[0] = word;
+      s >> tmp[1];
+      process.redirects.push_back(std::move(tmp));
+    } else {
+      process.words.push_back(word);
+    }
+  }
+  // 将剩余的命令推入
+  if (!process.words.empty() || !process.redirects.empty()) {
+    res.processes.push_back(process);
+  }
+  return std::move(res);
+}
+
+```
+
+```cpp
+// loop重构
+for (auto &process : res.processes) {
+  // Start new process
+  auto pid = fork();
+  switch (pid) {
+  case -1:
+    // On fork error
+    perror("fork");
+    std::exit(EXIT_FAILURE);
+  case 0:
+    // Child process
+    child_process(process);
+  default:
+    // 父进程将创建的PID储存起来
+    pids.push_back(pid);
+  }
+}
+for (auto pid : pids) {
+  // 统一等待
+  auto ret = waitpid(pid, nullptr, 0);
+  if (ret == -1) {
+    perror("waitpid");
+    std::exit(EXIT_FAILURE);
+  }
+}
+
+```
+
+#### 连接输入输出流
+
 ## 仓库
 
 [wsh](https://github.com/120MF/wsh)
-
-```
-
-```
-
-```
-
-```

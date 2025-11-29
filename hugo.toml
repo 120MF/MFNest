@@ -1,4 +1,4 @@
-baseURL = 'https://mfnest.tech/'
+baseURL = 'https://mfnest.inc/'
 languageCode = 'zh-cn'
 title = '羽窝'
 theme = 'hugo-theme-stack'
@@ -8,62 +8,61 @@ DefaultContentLanguage = "zh-cn"
 hasCJKLanguage = true
 
 
-
 [pagination]
 pagerSize = 10
 
 
 [menu]
 [[menu.main]]
-    name = "主页"
-    url = "/"
-    weight = 1
-    identifier = "home"
-    [menu.main.params]
-        icon = "home"
-        newTab = false
+name = "主页"
+url = "/"
+weight = 1
+identifier = "home"
+[menu.main.params]
+icon = "home"
+newTab = false
 [[menu.main]]
-    name = "搜索"
-    url = "/page/search"
-    weight = 1
-    identifier = "search"
-    [menu.main.params]
-        icon = "search"
-        newTab = false
+name = "搜索"
+url = "/page/search"
+weight = 1
+identifier = "search"
+[menu.main.params]
+icon = "search"
+newTab = false
 [[menu.main]]
-    name = "归档"
-    url = "/page/archives"
-    weight = 1
-    identifier = "archives"
-    [menu.main.params]
-        icon = "archives"
-        newTab = false
+name = "归档"
+url = "/page/archives"
+weight = 1
+identifier = "archives"
+[menu.main.params]
+icon = "archives"
+newTab = false
 [[menu.main]]
-    name = "链接"
-    url = "/page/links"
-    weight = 1
-    identifier = "links"
-    [menu.main.params]
-        icon = "link"
-        newTab = false
-        
+name = "链接"
+url = "/page/links"
+weight = 1
+identifier = "links"
+[menu.main.params]
+icon = "link"
+newTab = false
+
 
 [[menu.social]]
-    name = "Github"
-    url = "https://github.com/MoonBite666"
-    identifier = "github"
-    [[menu.social.params]]
-        icon = "brand-github"
+name = "Github"
+url = "https://github.com/120MF"
+identifier = "github"
+[[menu.social.params]]
+icon = "brand-github"
 [[menu.social]]
-    name = "Twitter"
-    url = "https://x.com/MoonFeather120"
-    identifier = "twitter"
-    [[menu.social.params]]
-        icon = "brand-twitter"
+name = "Twitter"
+url = "https://x.com/MoonFeather120"
+identifier = "twitter"
+[[menu.social.params]]
+icon = "brand-twitter"
 
 
 [markup]
-        # Markdown renderer configuration
+# Markdown renderer configuration
 [markup.goldmark.renderer]
 unsafe = true
 
@@ -91,11 +90,10 @@ lineNumbersInTable = true
 tabWidth = 4
 
 
-
 [params]
 
 # Pages placed under these sections will be shown on homepage and archive page.
-description = '两只大学生的学习记录、技术分享和弱智瞬间'
+description = '两只小动物的学习记录、技术分享和弱智瞬间'
 mainSections = ["post"]
 # Output page's full content in RSS.
 rssFullContent = true
@@ -105,14 +103,14 @@ ArticleReadingTime = true
 
 [params.footer]
 since = 2023
-customText = '<p>moonfeather with 120glowing</p><a href="https://beian.miit.gov.cn/" target="_blank">滇ICP备 · 2023005780号</a>'
+customText = '<p>MoonFeather Present</p>'
 
 [params.dateFormat]
 published = "Jan 02, 2006"
 lastUpdated = "Jan 02, 2006 15:04 MST"
 
 [params.sidebar]
-emoji = "😺"
+emoji = "🌠"
 subtitle = "热爱游戏和音乐，享受生活与共鸣。"
 
 [params.sidebar.avatar]

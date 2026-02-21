@@ -1,0 +1,28 @@
+graph TD
+    Title["有栈 Stackful vs 无栈 Stackless<br/>C++ 选择 Stackless 的原因"]
+    
+    Title --> Split
+    
+    Split --> SF["<b>有栈 Stackful</b>"]
+    Split --> SL["<b>无栈 Stackless</b><br/>C++20"]
+    
+    SF --> SF1["每个协程拥有<br/>独立的调用栈"]
+    SF --> SF2["栈指针: SP1, SP2, ..."]
+    SF --> SF3["<b>切换开销</b><br/>保存/恢复整个栈指针"]
+    SF --> SF4["内存占用<br/>每个栈通常 MB 级别"]
+    
+    SL --> SL1["编译器转换为<br/>状态机"]
+    SL --> SL2["跨越挂起点的局部变量<br/>存入协程帧 Frame"]
+    SL --> SL3["<b>帧分配</b><br/>堆/对象池/自定义分配器"]
+    SL --> SL4["<b>切换开销</b><br/>仅 resume handle<br/>轻量高效"]
+    SL --> SL5["内存占用<br/>帧大小可控"]
+    
+    SF3 -.对比.-> SL4
+    
+    SL --> Benefits["<b>Stackless 优势</b>"]
+    Benefits --> B1["✓ 内存可控<br/>用户可定制分配器"]
+    Benefits --> B2["✓ 协程帧更小<br/>适合高并发"]
+    Benefits --> B3["✓ 与事件驱动天生适配<br/>handle 易传递给内核/事件循环"]
+    Benefits --> B4["✓ 编译器优化空间<br/>帧消除 frame elision"]
+    
+    SL1 -.implements.-> SL3

@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant Caller as 调用者协程
+    participant EventLoop as 事件循环
+    participant Called as 被等待协程
+
+    Caller->>EventLoop: co_await Task<br/>(进入 await_suspend)
+    Note over Caller: 1. 保存 continuation = Caller<br/>2. 返回 Task handle
+    EventLoop->>Called: 2. resume(Task handle)
+    Note over Called: 3. 执行协程体
+    Called->>EventLoop: 4. 遇到 co_await 或 return<br/>(进入 final_suspend)
+    Note over Called: 5. final_suspend 中<br/>检查是否有 continuation
+    EventLoop->>Caller: 6. resume(continuation)<br/>回到 await 点
+    Note over Caller: 7. await_resume() 执行<br/>获取返回值或异常

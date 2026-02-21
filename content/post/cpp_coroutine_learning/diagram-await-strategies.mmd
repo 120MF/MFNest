@@ -1,0 +1,14 @@
+flowchart TD
+    Start[await_suspend 返回值与控制流] --> Decision{返回类型}
+    
+    Decision -->|void| Void["<b>void</b><br/>---<br/>标准挂起<br/>控制权回到调用者"]
+    Decision -->|bool| Bool["<b>bool</b><br/>---<br/>true: 挂起<br/>false: 不挂起"]
+    Decision -->|coroutine_handle&lt;&gt;| Handle["<b>coroutine_handle&lt;&gt;</b><br/>---<br/>对称转移 Symmetric Transfer"]
+    
+    Void --> Effect1["✓ 效果<br/>协程被挂起<br/>控制权给事件循环/调用者"]
+    Bool --> Effect2["✓ 效果<br/>true: 同 void 挂起<br/>false: 不挂起, 继续执行<br/>await_resume()"]
+    Handle --> Effect3["✓ 效果<br/>立即切换到指定协程<br/>无中间状态<br/>效率最高"]
+    
+    Effect1 --> Use1["应用场景<br/>将 handle 放入事件队列<br/>由调度器决定何时 resume"]
+    Effect2 --> Use2["应用场景<br/>快速路径检查<br/>避免不必要的挂起"]
+    Effect3 --> Use3["应用场景<br/>Task 的 continuation<br/>await_suspend 中的对称转移"]

@@ -42,6 +42,7 @@ readingTime = true
 举例对比（伪代码）：
 
 Stackful（概念）：
+
 ```
 协程A栈: [frameA variables...]
 协程B栈: [frameB variables...]
@@ -49,6 +50,7 @@ Stackful（概念）：
 ```
 
 Stackless（概念）：
+
 ```
 协程A帧(obj on heap): { locals that cross await points }
 协程B帧(obj on heap): { ... }
@@ -66,6 +68,12 @@ Stackless（概念）：
 下面先解释 promise 在设计中的位置：编译器在生成协程帧时会在帧中放置一个 promise 对象，promise 提供了协程帧的构造与生命周期钩子（包括 operator new/delete 的重载点），因此 promise 是实现 Stackless 策略的主要切入点——它让用户控制帧的分配和资源处理。
 
 接下来通过代码分步说明 promise 的关键接口与语义。
+
+### promise_type 的控制流
+
+下图展示了调用者协程通过 co_await Task 等待被等待协程时的完整控制流：调用者保存 continuation、切换到被等待协程执行、最后在 final_suspend 中恢复调用者。
+
+![协程控制流](./diagram-controlflow.png)
 
 ---
 
@@ -90,7 +98,7 @@ public:
 
     // await 接口（后文解释 await_suspend 的细节）
     bool await_ready() const noexcept { return false; }
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<> waiting_coro) noexcept { 
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<> waiting_coro) noexcept {
         m_handle.promise().continuation = waiting_coro;
         return m_handle; // 对称转移：立即切换执行 Task 对应的协程
     }
@@ -106,19 +114,13 @@ private:
 
 ## 4 promise_type：实现与例子
 
-在下文的控制流示意图中，展示了调用者协程 co_await Task 时的主要步骤（先保存 continuation、再对称转移到被等待协程、被等待协程执行并在 final_suspend 中 resume continuation）。图示：
+在下文代码中，展示了调用者协程 co_await Task 时的主要步骤（先保存 continuation、再对称转移到被等待协程、被等待协程执行并在 final_suspend 中 resume continuation）。
 
-![协程控制流](./diagram-controlflow.svg)
+### await_suspend 的返回策略
 
+下图给出 await_suspend 不同返回值对控制流的影响。根据返回类型（void、bool 或 coroutine_handle<>），控制流会有不同的行为：void 表示标准挂起、bool 决定是否挂起、coroutine_handle<> 实现对称转移。
 
-### await_suspend 的返回策略（示意图）
-
-下图给出 await_suspend 不同返回值对控制流的影响（简化示意）：
-
-![await_suspend 返回策略](./diagram-await-strategies.svg)
-
-
-
+![await_suspend 返回策略](./diagram-await-strategies.png)
 
 在 C++ 协程中，promise_type 决定了：如何构造返回对象、在初始/结束时是否挂起、如何存储返回值和异常等。
 
@@ -149,6 +151,7 @@ struct TaskPromiseBase {
 ```
 
 解释要点：
+
 - initial_suspend 返回 std::suspend_always 表示协程创建后不立即运行，而是由外部决定何时 resume（适用于事件/调度驱动场景）。
 - final_suspend 返回一个 FinalAwaiter，它会尝试把之前保存在 promise.continuation 的等待者唤醒（如果存在）。这就是 Task/await 的闭环。
 - unhandled_exception 把异常保存为 std::exception_ptr，以便在 await_resume 中跨线程/协程重新抛出。
@@ -172,10 +175,9 @@ struct TaskPromise : TaskPromiseBase {
 
 ## 3 Stackless 与内存（加示例）
 
-下图对比了有栈（Stackful）与无栈（Stackless）的概念：有栈需交换完整栈指针，而无栈把跨挂起点的变量保存在堆上的协程帧中，通过句柄 resume 实现切换。图示：
+下图对比了有栈（Stackful）与无栈（Stackless）的概念：有栈需交换完整栈指针，而无栈把跨挂起点的变量保存在堆上的协程帧中，通过句柄 resume 实现切换。这个设计决策使 C++ 协程能更好地与事件驱动和自定义内存分配相结合。
 
-![Stackless vs Stackful](./diagram-stackless.svg)
-
+![Stackless vs Stackful](./diagram-stackless.png)
 
 “Stackless” 是很多人困惑的地方。用一个小示例和注释说明：
 
@@ -243,16 +245,6 @@ std::coroutine_handle<> await_suspend(std::coroutine_handle<> h) {
 - 对高频短生命周期协程使用自定义分配器（如线程本地对象池），通过在 promise_type 中重载 operator new/delete 实现。示例已在第3节给出。
 - 尽量避免在 await_suspend 中做耗时阻塞工作。
 - 使用 std::variant / union 来复用返回值与异常的内存，减少额外分配。
-
----
-
-## 6 完整实现与附录
-
-文中为了便于教学把实现拆分为多个片段。完整实现（可直接编译的 header）放在本节附录以便参考：
-
-```cpp
-// （此处可放回最开始的完整 HYIO_TASK_HPP 实现，便于读者复制）
-```
 
 ---
 

@@ -3,11 +3,11 @@ title = 'Linux io_uring 开发与实践'
 date = 2026-02-22T01:54:00+08:00
 draft = false
 description = "从 epoll 的性能瓶颈出发，深入讲解 io_uring 的工作原理，并实现一个完整的 Context 类来管理异步 I/O 操作。"
-slug = "linux_io_uring_dev_practice"
+slug = ""
 image = ""
 categories = ["Linux", "编程相关"]
 tags = ["io_uring", "异步IO", "liburing", "C++", "高性能"]
-weight = 0
+weight = 1
 keywords = ["io_uring", "epoll", "异步IO", "内核编程", "liburing"]
 readingTime = true
 +++

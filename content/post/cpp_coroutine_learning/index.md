@@ -73,7 +73,7 @@ Stackless（概念）：
 
 下图展示了调用者协程通过 co_await Task 等待被等待协程时的完整控制流：调用者保存 continuation、切换到被等待协程执行、最后在 final_suspend 中恢复调用者。
 
-![协程控制流](./diagram-controlflow.png)
+![协程控制流](diagram-controlflow.png)
 
 ---
 
@@ -120,7 +120,7 @@ private:
 
 下图给出 await_suspend 不同返回值对控制流的影响。根据返回类型（void、bool 或 coroutine_handle<>），控制流会有不同的行为：void 表示标准挂起、bool 决定是否挂起、coroutine_handle<> 实现对称转移。
 
-![await_suspend 返回策略](./diagram-await-strategies.png)
+![await_suspend 返回策略](diagram-await-strategies.png)
 
 在 C++ 协程中，promise_type 决定了：如何构造返回对象、在初始/结束时是否挂起、如何存储返回值和异常等。
 
@@ -177,7 +177,7 @@ struct TaskPromise : TaskPromiseBase {
 
 下图对比了有栈（Stackful）与无栈（Stackless）的概念：有栈需交换完整栈指针，而无栈把跨挂起点的变量保存在堆上的协程帧中，通过句柄 resume 实现切换。这个设计决策使 C++ 协程能更好地与事件驱动和自定义内存分配相结合。
 
-![Stackless vs Stackful](./diagram-stackless.png)
+![Stackless vs Stackful](diagram-stackless.png)
 
 “Stackless” 是很多人困惑的地方。用一个小示例和注释说明：
 

@@ -22,7 +22,7 @@ readingTime = true
 
 - 启用/禁用系统
 - 视觉抓取流程
-- 矿物存取流程  
+- 矿物存取流程
 - 实时错误处理与恢复
 
 如果用传统的布尔标志和条件判断，代码会很快陷入"意大利面条式"的混乱。状态机提供了一套**形式化的方法**，确保：
@@ -71,10 +71,10 @@ state YandyArm {
   ' ============================================
   state Operational {
     [*] -> Disabled
-    
+
     state Disabled {
     }
-    
+
     state ManualControl {
       ' 内部指令：不触发状态切换
       ManualControl -> ManualControl : -CMD_RESET / clear_accumulators
@@ -86,10 +86,10 @@ state YandyArm {
       ' 冲突报错
       ManualControl --> ManualControl : -CMD_SWITCH_STORE [store_logic_conflict] / log_store_conflict
     }
-    
+
     state FetchingMode {
     }
-    
+
     state StorageMode {
     }
 
@@ -422,6 +422,7 @@ private:
 ### 1. Guard vs 条件分支
 
 **错误做法：** 在 Action 中进行条件判断
+
 ```cpp
 template <> struct Action<by_name("fetch")> {
   void operator()(EVT const&, FSM& fsm, S&, T&) {
@@ -433,6 +434,7 @@ template <> struct Action<by_name("fetch")> {
 ```
 
 **正确做法：** 用多条转换路径 + Guard
+
 ```puml
 ManualControl --> StorageMode : CMD_SWITCH_STORE [has_mineral && can_deposit] / move_to_deposit
 ManualControl --> StorageMode : CMD_SWITCH_STORE [!has_mineral && can_retrieve] / move_to_retrieve
@@ -443,11 +445,13 @@ Guard 让状态转换**显式且可追踪**，更易于维护和调试。
 ### 2. 内部转换 vs 状态迁移
 
 **内部转换** — 不改变状态，仅执行动作：
+
 ```puml
 ManualControl -> ManualControl : -CMD_RESET / clear_accumulators
 ```
 
 **状态迁移** — 离开当前状态，进入新状态：
+
 ```puml
 ManualControl --> FetchingMode : CMD_SWITCH_FETCH / enter_fetch
 ```
@@ -469,6 +473,7 @@ fsm.mineral_attached = !fsm.mineral_attached;
 ### 4. 错误恢复设计
 
 从 ErrorMode 回到 Operational：
+
 ```puml
 ErrorMode --> Operational : CMD_RESET / clear_error
 ```
@@ -519,6 +524,5 @@ Boost.MSM 和 PUML 的结合为大型系统的状态管理提供了**优雅而�
 
 ## 参考资源
 
-- Boost.MSM 官方文档：https://www.boost.org/doc/libs/1_85_0/libs/msm/doc/html/index.html
+- Boost.MSM 官方文档：https://www.boost.org/doc/libs/latest/doc/antora/msm/index.html
 - PlantUML 状态机语法：https://plantuml.com/state-diagram
-- C++11 与元编程：*Effective Modern C++* by Scott Meyers
